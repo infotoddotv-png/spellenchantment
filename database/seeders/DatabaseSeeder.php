@@ -46,6 +46,22 @@ class DatabaseSeeder extends Seeder
         ];
         foreach ($products as $p) { Product::firstOrCreate(['slug'=>$p['slug']], $p); }
 
+        // ── Digital file attachments (secure download delivery demo) ────────
+        $digitalFiles = [
+            'crimson-codex-digital' => ['path' => 'digital-seed-content/crimson-codex.txt', 'name' => 'The-Crimson-Codex.txt'],
+            'digital-tarot-guidebook' => ['path' => 'digital-seed-content/tarot-guidebook.txt', 'name' => 'Digital-Tarot-Guidebook.txt'],
+        ];
+        foreach ($digitalFiles as $slug => $file) {
+            $product = Product::where('slug', $slug)->first();
+            if ($product && ! $product->file_path) {
+                $product->update([
+                    'file_path' => $file['path'],
+                    'file_name' => $file['name'],
+                    'file_size' => @filesize(storage_path('app/' . $file['path'])) ?: null,
+                ]);
+            }
+        }
+
         // ── Blog Posts ─────────────────────────────────────────────────────
         $posts = [
             ['title'=>'The Art of Shadow Magic: A Beginner\'s Guide','slug'=>'shadow-magic-beginners-guide','excerpt'=>'Explore the ancient tradition of shadow work and learn how to harness the hidden power within the darkness of your own soul.','content'=>'Shadow magic is one of the oldest and most misunderstood branches of the arcane arts. Unlike the bright flames of solar magic, shadow work requires you to descend into the depths of your own subconscious — to face the parts of yourself you have long kept hidden. This guide will walk you through the fundamental principles, helping you begin your journey with clarity and safety. The first step is always grounding. Before any shadow work can begin, you must establish a firm connection to the present moment...','author'=>'Morgantha Vex','tags'=>['shadow-magic','beginners','rituals'],'featured'=>true,'published_at'=>now()->subDays(3),'reading_time'=>8],

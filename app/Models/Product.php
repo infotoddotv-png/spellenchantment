@@ -11,6 +11,7 @@ class Product extends Model
         'name', 'slug', 'description', 'lore', 'price', 'original_price',
         'type', 'category_id', 'image_url', 'tags', 'rating', 'review_count',
         'in_stock', 'featured', 'is_new', 'is_bestseller',
+        'file_path', 'file_name', 'file_size', 'stock_qty',
     ];
 
     protected $casts = [

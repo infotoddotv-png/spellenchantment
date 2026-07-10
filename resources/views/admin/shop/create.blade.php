@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('title', 'Add Product')
 
 @section('content')
@@ -6,7 +6,7 @@
   <div class="container" style="max-width:46rem;">
     <div class="glass-card rounded-2xl" style="padding:2rem;">
       <h1 style="font-family:var(--font-display);font-size:1.6rem;font-weight:700;margin-bottom:1.5rem;">Add Product</h1>
-      <form method="POST" action="{{ route('admin.shop.store') }}">
+      <form method="POST" action="{{ route('admin.shop.store') }}" enctype="multipart/form-data">
         @csrf
         <div class="form-group">
           <label class="form-label">Name</label>
@@ -63,6 +63,14 @@
         <div class="form-group">
           <label class="form-label">In Stock</label>
           <input type="checkbox" name="in_stock" value="1" checked>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stock Quantity (physical, optional)</label>
+          <input type="number" name="stock_qty" class="form-input">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Digital File (for digital products — enables secure download delivery)</label>
+          <input type="file" name="digital_file" class="form-input">
         </div>
         <button class="magic-btn magic-btn-primary" type="submit">Save Product</button>
       </form>

@@ -1,7 +1,8 @@
-# 🔮 Arcane Sanctum — Laravel Installation Guide
+# 🔮 Spell Enchantment — Laravel Installation Guide
 
-A cinematic dark-fantasy marketplace built with PHP Laravel.  
-Dark purple-black aesthetic inspired by Hogwarts + Elden Ring.
+A cinematic dark-fantasy occult marketplace built with PHP Laravel, now with a full
+admin operations console: Orders, Analytics, Coupons, multi-gateway Payments
+(Stripe + PayPal + Manual), digital file delivery, and an Audit Log.
 
 ---
 
@@ -9,29 +10,29 @@ Dark purple-black aesthetic inspired by Hogwarts + Elden Ring.
 
 | Requirement | Version |
 |---|---|
-| PHP | 8.2+ |
+| PHP | 8.2+ (with `ext-curl`, `ext-mbstring`, `ext-openssl`) |
 | Composer | 2.x |
-| MySQL | 8.0+ (or MariaDB 10.6+) |
+| MySQL | 8.0+ (or MariaDB 10.6+) — or SQLite for quick local testing |
 | Web Server | Apache or Nginx (or `php artisan serve` for local) |
 
 ---
 
-## Quick Install (5 steps)
+## Quick Install (6 steps)
 
 ### Step 1 — Unzip
 
 ```bash
-unzip arcane-sanctum-laravel.zip
-cd arcane-sanctum-laravel
+unzip spell-enchantment-laravel.zip
+cd spell-enchantment-laravel
 ```
 
 ### Step 2 — Install PHP dependencies
 
 ```bash
-composer install --optimize-autoloader
+composer install --optimize-autoloader --no-dev
 ```
 
-> This requires Composer on your system. Download at https://getcomposer.org
+> Requires Composer: https://getcomposer.org
 
 ### Step 3 — Configure your environment
 
@@ -40,20 +41,20 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Now open `.env` and edit the database section:
+Open `.env` and edit the database section:
 
 ```dotenv
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=arcane_sanctum   # create this database first
+DB_DATABASE=spell_enchantment
 DB_USERNAME=your_db_user
 DB_PASSWORD=your_db_password
 ```
 
 > **Create the database first:**
 > ```sql
-> CREATE DATABASE arcane_sanctum CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+> CREATE DATABASE spell_enchantment CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 > ```
 
 ### Step 4 — Run migrations and seed data
@@ -62,14 +63,20 @@ DB_PASSWORD=your_db_password
 php artisan migrate --seed
 ```
 
-This creates all tables and populates them with:
-- 10 categories (7 shop + 3 library)
-- 11 products (wands, grimoires, crystals, tarot, runes, amulets, candles)
-- 3 blog posts
-- 4 library entries
-- 6 testimonials
+This creates all tables (products, orders, coupons, downloads, audit logs,
+payment settings) and seeds:
+- 10 categories, 11+ products (including 2 digital products with real
+  attached files for the download-delivery system)
+- 3 blog posts, 4 library entries, 6 testimonials
 
-### Step 5 — Start the server
+### Step 5 — Link storage & set permissions
+
+```bash
+php artisan storage:link
+chmod -R 775 storage bootstrap/cache
+```
+
+### Step 6 — Start the server
 
 ```bash
 php artisan serve
@@ -79,19 +86,84 @@ Open **http://localhost:8000** in your browser. 🎉
 
 ---
 
-## SQLite Quick Start (no MySQL required)
+## Creating your Admin account
 
-For local testing without MySQL, edit `.env`:
+The seeder does not create an admin user (for security). Create one via Tinker:
+
+```bash
+php artisan tinker
+```
+```php
+\App\Models\User::create([
+    'name' => 'Admin',
+    'email' => 'you@yourdomain.com',
+    'password' => bcrypt('choose-a-strong-password'),
+    'role' => 'admin',
+    'status' => 'active',
+]);
+```
+
+Then log in at `/login` and visit `/admin` for the dashboard.
+
+---
+
+## Configuring Payment Gateways
+
+All gateway credentials are stored in the database and configured entirely
+from **Admin → Payments** (`/admin/payments`) — no `.env` editing required.
+
+- **Stripe** — enter your Secret Key and (optionally) Publishable Key + Webhook
+  Signing Secret.
+- **PayPal** — enter your Client ID and Client Secret, and choose
+  Sandbox or Live mode.
+- **Manual** (bank transfer / crypto / pay-on-pickup) — no keys needed, just
+  write the instructions customers will see at checkout and on their order page.
+
+Each gateway can be independently enabled/disabled from the same screen.
+
+### Stripe webhook
+
+Point your Stripe webhook to:
+```
+https://yourdomain.com/webhooks/stripe
+```
+Subscribe to the `checkout.session.completed` and `payment_intent.succeeded`
+events. This is what triggers automatic order fulfillment + digital delivery.
+
+### PayPal return URL
+
+PayPal redirects back to `https://yourdomain.com/checkout/paypal/return`
+automatically — no extra dashboard config needed beyond your Client ID/Secret.
+
+### Manual payment
+
+For bank transfer, crypto, or "pay on pickup" style orders — customers see the
+instructions you set in Admin → Payments, and orders stay in a "pending
+payment" state until you mark them paid in Admin → Orders.
+
+---
+
+## Digital Product Delivery
+
+Products with `type = digital` can have a file attached in **Admin → Shop →
+Edit Product** (upload field). Once an order is marked **paid**, the customer
+gets a secure, tokenized download link (visible on their order page and, if
+mail is configured, emailed to them). Download tokens can be revoked/reissued
+from **Admin → Orders**.
+
+---
+
+## SQLite Quick Start (no MySQL required)
 
 ```dotenv
 DB_CONNECTION=sqlite
-DB_DATABASE=/absolute/path/to/arcane-sanctum-laravel/database/database.sqlite
+DB_DATABASE=/absolute/path/to/spell-enchantment-laravel/database/database.sqlite
 ```
 
-Then:
 ```bash
 touch database/database.sqlite
 php artisan migrate --seed
+php artisan storage:link
 php artisan serve
 ```
 
@@ -101,14 +173,12 @@ php artisan serve
 
 ### Apache
 
-Point your virtual host document root to the `/public` directory:
-
 ```apache
 <VirtualHost *:80>
     ServerName yourdomain.com
-    DocumentRoot /var/www/arcane-sanctum-laravel/public
+    DocumentRoot /var/www/spell-enchantment-laravel/public
 
-    <Directory /var/www/arcane-sanctum-laravel/public>
+    <Directory /var/www/spell-enchantment-laravel/public>
         AllowOverride All
         Require all granted
     </Directory>
@@ -123,7 +193,7 @@ Enable mod_rewrite: `sudo a2enmod rewrite && sudo service apache2 restart`
 server {
     listen 80;
     server_name yourdomain.com;
-    root /var/www/arcane-sanctum-laravel/public;
+    root /var/www/spell-enchantment-laravel/public;
 
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-Content-Type-Options "nosniff";
@@ -167,116 +237,97 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Set permissions
+# Storage link + permissions
+php artisan storage:link
 chmod -R 755 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 ```
 
+Remember to also set your live Stripe/PayPal keys and switch `PAYPAL_MODE=live`
+before accepting real payments, and point the Stripe webhook at your real
+domain (see above).
+
 ---
 
-## Directory Structure
+## Directory Structure (key additions)
 
 ```
-arcane-sanctum-laravel/
+spell-enchantment-laravel/
 ├── app/
 │   ├── Http/Controllers/
-│   │   ├── HomeController.php
-│   │   ├── ShopController.php
-│   │   ├── LibraryController.php
-│   │   ├── BlogController.php
-│   │   ├── CartController.php        ← session-based cart
-│   │   ├── CheckoutController.php
-│   │   └── OrderController.php
+│   │   ├── Admin/
+│   │   │   ├── OrderController.php
+│   │   │   ├── CouponController.php
+│   │   │   ├── PaymentSettingsController.php
+│   │   │   ├── AnalyticsController.php
+│   │   │   ├── AuditLogController.php
+│   │   │   └── ShopController.php
+│   │   ├── CheckoutController.php        ← coupon apply, gateway dispatch
+│   │   ├── StripeWebhookController.php
+│   │   └── OrderController.php           ← secure download route
+│   ├── Services/
+│   │   ├── PaymentService.php
+│   │   ├── DigitalDeliveryService.php
+│   │   └── PaymentGateways/
+│   │       ├── PaymentGatewayInterface.php
+│   │       ├── StripeGateway.php
+│   │       ├── PaypalGateway.php
+│   │       └── ManualGateway.php
 │   └── Models/
-│       ├── Category.php
-│       ├── Product.php
-│       ├── BlogPost.php
-│       ├── LibraryEntry.php
-│       ├── Order.php
-│       └── Testimonial.php
-├── database/
-│   ├── migrations/                   ← all table definitions
-│   ├── seeders/DatabaseSeeder.php    ← all seed data
-│   └── arcane_sanctum_mysql_schema.sql ← raw SQL if needed
-├── public/
-│   ├── css/arcane.css                ← full dark-fantasy stylesheet
-│   ├── js/arcane.js                  ← particles, cursor, interactions
-│   └── images/hero-bg.jpg           ← hero background image
-├── resources/views/
-│   ├── layouts/app.blade.php         ← navbar, footer, magic cursor
-│   └── pages/
-│       ├── home.blade.php
-│       ├── shop/index.blade.php
-│       ├── shop/show.blade.php
-│       ├── library/index.blade.php
-│       ├── library/show.blade.php
-│       ├── blog/index.blade.php
-│       ├── blog/show.blade.php
-│       ├── cart.blade.php
-│       ├── checkout.blade.php
-│       └── orders/show.blade.php
-├── routes/web.php                    ← all routes
-├── .env.example                      ← template config
-├── composer.json
-└── INSTALL.md                        ← this file
+│       ├── Coupon.php
+│       ├── Download.php
+│       ├── AuditLog.php
+│       ├── PaymentSetting.php
+│       └── Setting.php
+├── resources/views/admin/
+│   ├── orders/ (index, show)
+│   ├── coupons/index
+│   ├── payments/index
+│   ├── analytics/index
+│   └── audit-logs/index
+├── database/migrations/                  ← all table definitions
+├── database/seeders/DatabaseSeeder.php   ← all seed data incl. digital files
+└── INSTALL.md                            ← this file
 ```
 
 ---
 
-## Pages & URLs
+## Admin Panel Pages
 
 | URL | Description |
 |---|---|
-| `/` | Home — hero, featured products, library preview, stats, testimonials |
-| `/shop` | Product grid with category sidebar filter |
-| `/shop/{slug}` | Individual product detail with lore and add-to-cart |
-| `/library` | Arcane library with difficulty filtering by category tab |
-| `/library/{slug}` | Individual library entry |
-| `/blog` | The Scholar's Chronicles with featured post layout |
-| `/blog/{slug}` | Individual blog post |
-| `/cart` | Your Satchel (session-based cart) |
-| `/checkout` | Order form with payment method selection |
-| `/orders/{id}` | Order confirmation |
+| `/admin` | Dashboard — key metrics overview |
+| `/admin/shop` | Product management (physical + digital, file upload, stock) |
+| `/admin/orders` | Orders list & detail — status pipeline, manual payment marking |
+| `/admin/coupons` | Discount coupon management |
+| `/admin/payments` | Stripe / PayPal / Manual gateway configuration |
+| `/admin/analytics` | Revenue, best sellers, digital vs physical split |
+| `/admin/audit-logs` | Who changed what, and when |
 
----
+## Storefront Pages
 
-## Features
-
-- **Dark-fantasy design** — `#0a0608` background, gold `#c9a84c` primary, purple accent, glass-card panels
-- **Cinzel display font** + **Crimson Pro** body serif, loaded from Google Fonts
-- **Particle canvas background** — 80 animated particles with mouse repulsion
-- **Magic cursor** — gold ring following the mouse (desktop only)
-- **Scroll fade-in** animations on all content blocks
-- **Responsive navbar** — transparent → frosted glass on scroll, mobile hamburger menu
-- **Category filter** — shop sidebar and library tabs (no JavaScript fetch — server-side filtering)
-- **Session cart** — add / update / remove items with quantity controls
-- **Checkout** — validates name, email, payment method; saves order to database
-- **Order confirmation** — full order manifest with itemised total
+| URL | Description |
+|---|---|
+| `/` | Home |
+| `/shop` , `/shop/{slug}` | Product grid & detail |
+| `/library` , `/library/{slug}` | Free arcane library content |
+| `/blog` , `/blog/{slug}` | The Scholar's Chronicles |
+| `/cart` | Session-based cart |
+| `/checkout` | Coupon code, payment method selection (Stripe/PayPal/Manual) |
+| `/orders/{id}` | Order confirmation, download links, manual payment instructions |
+| `/downloads/{token}` | Secure, tokenized digital file download |
 
 ---
 
 ## Customisation
 
-### Add a product image
-Put the image in `public/images/` and set the `image_url` column to `/images/filename.jpg`.
-
 ### Change the colour palette
-Edit the CSS variables at the top of `public/css/arcane.css`:
-
-```css
-:root {
-  --primary: hsl(44, 56%, 54%);   /* gold */
-  --accent:  hsl(270, 80%, 50%);  /* purple */
-  --background: hsl(330, 25%, 3%); /* near-black */
-}
-```
+Edit CSS variables in `public/css/arcane.css` (storefront) and
+`public/css/admin.css` (admin panel).
 
 ### Add more products/categories
-Use Laravel Tinker or add rows to `DatabaseSeeder.php` and re-seed:
-
+Use Admin → Shop, or add rows to `DatabaseSeeder.php` and re-seed:
 ```bash
-php artisan tinker
-# or
 php artisan migrate:fresh --seed   # WARNING: drops all data
 ```
 
@@ -291,8 +342,10 @@ php artisan migrate:fresh --seed   # WARNING: drops all data
 | "No application encryption key" | `php artisan key:generate` |
 | CSS/JS not loading | Ensure DocumentRoot points to `/public`, not project root |
 | Database error | Verify `.env` credentials and that the database exists |
+| Uploaded product files 404 | Run `php artisan storage:link` |
+| Stripe webhook not firing | Check webhook URL, secret, and that `webhooks/stripe` is CSRF-exempt (already configured in `bootstrap/app.php`) |
 | Composer not found | Install from https://getcomposer.org |
 
 ---
 
-*Built by Arcane Sanctum — Ancient Knowledge · Mystical Arts*
+*Built by Spell Enchantment — Ancient Knowledge · Mystical Arts*

@@ -64,6 +64,25 @@
         </div>
       </div>
 
+      @if($order->downloads->count())
+      <div class="glass-card rounded-2xl" style="padding:1.5rem;text-align:left;margin-bottom:2rem;border-color:rgba(255,255,255,0.05);">
+        <h3 style="font-family:var(--font-display);font-weight:700;margin-bottom:1rem;">Your Downloads</h3>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          @foreach($order->downloads as $dl)
+            <a href="{{ route('downloads.show', $dl->token) }}" class="magic-btn magic-btn-outline" style="justify-content:space-between;">
+              <span>{{ $dl->product->name }}</span>
+              <span style="color:var(--muted-fg);font-size:0.8rem;">{{ $dl->download_count }}/{{ $dl->max_downloads }} used</span>
+            </a>
+          @endforeach
+        </div>
+      </div>
+      @elseif($order->payment_method === 'manual' && $order->status === 'pending_payment')
+      <div class="glass-card rounded-2xl" style="padding:1.5rem;text-align:left;margin-bottom:2rem;border-color:rgba(255,255,255,0.05);">
+        <h3 style="font-family:var(--font-display);font-weight:700;margin-bottom:0.75rem;">Payment Instructions</h3>
+        <p style="color:var(--muted-fg);white-space:pre-line;">{{ \App\Models\PaymentSetting::get('manual_instructions', 'Please contact us to complete payment for this order.') }}</p>
+      </div>
+      @endif
+
       <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
         <a href="{{ route('shop.index') }}" class="magic-btn magic-btn-primary">Continue Seeking</a>
         <a href="{{ route('home') }}" class="magic-btn magic-btn-outline">Return to Sanctum</a>

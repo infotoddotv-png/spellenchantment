@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('title', 'Edit Product')
 
 @section('content')
@@ -6,7 +6,7 @@
   <div class="container" style="max-width:46rem;">
     <div class="glass-card rounded-2xl" style="padding:2rem;">
       <h1 style="font-family:var(--font-display);font-size:1.6rem;font-weight:700;margin-bottom:1.5rem;">Edit Product</h1>
-      <form method="POST" action="{{ route('admin.shop.update', ['shop' => ($product->id ?? request()->route('shop'))]) }}">
+      <form method="POST" action="{{ route('admin.shop.update', ['shop' => ($product->id ?? request()->route('shop'))]) }}" enctype="multipart/form-data">
         @csrf @method('PUT')
         <div class="form-group">
           <label class="form-label">Name</label>
@@ -63,6 +63,17 @@
         <div class="form-group">
           <label class="form-label">In Stock</label>
           <input type="checkbox" name="in_stock" value="1" {{ $product->in_stock ? 'checked' : '' }}>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stock Quantity (physical, optional)</label>
+          <input type="number" name="stock_qty" class="form-input" value="{{ old('stock_qty', $product->stock_qty) }}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Digital File</label>
+          @if($product->file_path)
+            <p style="color:var(--muted-fg);font-size:0.85rem;">Current file: {{ $product->file_name }}</p>
+          @endif
+          <input type="file" name="digital_file" class="form-input">
         </div>
         <button class="magic-btn magic-btn-primary" type="submit">Update Product</button>
       </form>

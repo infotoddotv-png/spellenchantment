@@ -36,7 +36,18 @@ class ShopController extends Controller
             'featured' => ['nullable', 'boolean'],
             'is_new' => ['nullable', 'boolean'],
             'is_bestseller' => ['nullable', 'boolean'],
+            'stock_qty' => ['nullable', 'integer'],
+            'digital_file' => ['nullable', 'file', 'max:51200'],
         ]);
+
+        if ($request->hasFile('digital_file')) {
+            $file = $request->file('digital_file');
+            $path = $file->store('digital-products');
+            $data['file_path'] = $path;
+            $data['file_name'] = $file->getClientOriginalName();
+            $data['file_size'] = $file->getSize();
+        }
+        unset($data['digital_file']);
 
         Product::create($data);
         return redirect()->route('admin.shop.index')->with('success', 'Product created.');
@@ -64,7 +75,18 @@ class ShopController extends Controller
             'featured' => ['nullable', 'boolean'],
             'is_new' => ['nullable', 'boolean'],
             'is_bestseller' => ['nullable', 'boolean'],
+            'stock_qty' => ['nullable', 'integer'],
+            'digital_file' => ['nullable', 'file', 'max:51200'],
         ]);
+
+        if ($request->hasFile('digital_file')) {
+            $file = $request->file('digital_file');
+            $path = $file->store('digital-products');
+            $data['file_path'] = $path;
+            $data['file_name'] = $file->getClientOriginalName();
+            $data['file_size'] = $file->getSize();
+        }
+        unset($data['digital_file']);
 
         $shop->update($data);
         return redirect()->route('admin.shop.index')->with('success', 'Product updated.');

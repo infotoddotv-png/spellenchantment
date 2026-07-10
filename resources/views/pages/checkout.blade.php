@@ -36,7 +36,7 @@
           <h3 style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;margin:2rem 0 1rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">Offering Method</h3>
 
           <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:2rem;">
-            @foreach([['card','Standard Card'],['crypto','Aetherial Coin (Crypto)'],['paypal','PayPal']] as [$val,$label])
+            @foreach([['card','Card (via Stripe)'],['paypal','PayPal'],['manual','Manual / Bank Transfer']] as [$val,$label])
             <label class="radio-option" style="cursor:pointer;">
               <input type="radio" name="payment_method" value="{{ $val }}" {{ old('payment_method','card') === $val ? 'checked' : '' }} style="accent-color:var(--primary);">
               <span style="font-family:var(--font-sans);font-weight:500;">{{ $label }}</span>
@@ -56,6 +56,19 @@
 
       {{-- ORDER MANIFEST --}}
       <div style="position:sticky;top:6rem;align-self:start;">
+        <div class="glass-card rounded-2xl" style="padding:1.25rem;border-color:rgba(255,255,255,0.05);background:rgba(0,0,0,0.2);margin-bottom:1rem;">
+          @if(session('error'))
+            <div class="form-error" style="margin-bottom:0.75rem;">{{ session('error') }}</div>
+          @endif
+          @if(session('success'))
+            <div style="color:#4ade80;font-size:0.85rem;margin-bottom:0.75rem;">{{ session('success') }}</div>
+          @endif
+          <form action="{{ route('checkout.apply-coupon') }}" method="POST" style="display:flex;gap:0.5rem;">
+            @csrf
+            <input type="text" name="code" placeholder="Coupon code" class="form-input" style="flex:1;" value="{{ $coupon ?? '' }}">
+            <button type="submit" class="magic-btn magic-btn-outline">Apply</button>
+          </form>
+        </div>
         <div class="glass-card rounded-2xl" style="padding:1.5rem;border-color:rgba(255,255,255,0.05);background:rgba(0,0,0,0.2);" data-fadein data-delay="150">
           <h3 style="font-family:var(--font-display);font-size:1.15rem;font-weight:700;margin-bottom:1.5rem;">Order Manifest</h3>
 
@@ -92,6 +105,11 @@
             <div style="display:flex;justify-content:space-between;color:var(--muted-fg);">
               <span>Ethereal Delivery</span><span>Free</span>
             </div>
+            @if(($discount ?? 0) > 0)
+            <div style="display:flex;justify-content:space-between;color:#4ade80;">
+              <span>Discount ({{ $coupon }})</span><span>-${{ number_format($discount,2) }}</span>
+            </div>
+            @endif
             <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.08);">
               <span style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;">Total</span>
               <span style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--primary);text-shadow:0 0 8px rgba(201,168,76,0.3);">${{ number_format($total,2) }}</span>

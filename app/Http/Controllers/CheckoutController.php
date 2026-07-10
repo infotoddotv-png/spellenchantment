@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\PaymentGateways\PaypalGateway;
+use App\Services\PaymentService;
 use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
@@ -17,9 +20,37 @@ class CheckoutController extends Controller
 
         $items    = $this->buildCartItems($cart);
         $subtotal = collect($items)->sum(fn($i) => $i['price'] * $i['quantity']);
-        $total    = $subtotal;
 
-        return view('pages.checkout', compact('items', 'subtotal', 'total'));
+        $coupon = session('coupon');
+        $discount = 0;
+        if ($coupon) {
+            $c = Coupon::where('code', $coupon)->first();
+            if ($c && $c->isValid($subtotal)) {
+                $discount = $c->calculateDiscount($subtotal);
+            } else {
+                session()->forget('coupon');
+                $coupon = null;
+            }
+        }
+
+        $total = max($subtotal - $discount, 0);
+
+        return view('pages.checkout', compact('items', 'subtotal', 'total', 'discount', 'coupon'));
+    }
+
+    public function applyCoupon(Request $request)
+    {
+        $request->validate(['code' => 'required|string']);
+
+        $coupon = Coupon::where('code', $request->code)->first();
+
+        if (! $coupon || ! $coupon->isValid()) {
+            return back()->with('error', 'Invalid or expired coupon code.');
+        }
+
+        session(['coupon' => $coupon->code]);
+
+        return back()->with('success', 'Coupon applied!');
     }
 
     public function store(Request $request)
@@ -27,7 +58,7 @@ class CheckoutController extends Controller
         $data = $request->validate([
             'name'           => 'required|string|min:2',
             'email'          => 'required|email',
-            'payment_method' => 'required|in:card,crypto,paypal',
+            'payment_method' => 'required|in:card,crypto,paypal,manual',
         ]);
 
         $cart  = session('cart', []);
@@ -39,20 +70,81 @@ class CheckoutController extends Controller
 
         $subtotal = collect($items)->sum(fn($i) => $i['price'] * $i['quantity']);
 
+        $couponCode = session('coupon');
+        $discount = 0;
+        $coupon = null;
+        if ($couponCode) {
+            $coupon = Coupon::where('code', $couponCode)->first();
+            if ($coupon && $coupon->isValid($subtotal)) {
+                $discount = $coupon->calculateDiscount($subtotal);
+            } else {
+                $coupon = null;
+            }
+        }
+
+        $total = max($subtotal - $discount, 0);
+
+        $gateway = match ($data['payment_method']) {
+            'card' => 'stripe',
+            'paypal' => 'paypal',
+            'crypto', 'manual' => 'manual',
+        };
+
         $order = Order::create([
-            'name'           => $data['name'],
-            'email'          => $data['email'],
-            'payment_method' => $data['payment_method'],
-            'status'         => 'confirmed',
-            'subtotal'       => $subtotal,
-            'total'          => $subtotal,
-            'items'          => $items,
+            'name'              => $data['name'],
+            'email'             => $data['email'],
+            'payment_method'    => $data['payment_method'],
+            'payment_gateway'   => $gateway,
+            'status'            => 'pending',
+            'subtotal'          => $subtotal,
+            'discount'          => $discount,
+            'coupon_code'       => $coupon?->code,
+            'total'             => $total,
+            'items'             => $items,
         ]);
 
-        session()->forget('cart');
+        if ($coupon) {
+            $coupon->increment('used_count');
+        }
+
+        session()->forget(['cart', 'coupon']);
+
+        try {
+            $redirectUrl = PaymentService::charge($order);
+        } catch (\Throwable $e) {
+            $order->update(['status' => 'failed']);
+            return redirect()->route('checkout.index')->with('error', $e->getMessage());
+        }
+
+        if ($redirectUrl) {
+            return redirect()->away($redirectUrl);
+        }
+
+        if ($gateway === 'manual') {
+            return redirect()->route('orders.show', $order->id)
+                ->with('success', 'Order placed! Follow the payment instructions to complete your purchase.');
+        }
 
         return redirect()->route('orders.show', $order->id)
             ->with('success', 'Your order has been placed successfully!');
+    }
+
+    public function paypalReturn(Request $request, Order $order)
+    {
+        $paypalOrderId = $request->query('token');
+
+        try {
+            $result = (new PaypalGateway())->capture($paypalOrderId);
+        } catch (\Throwable $e) {
+            return redirect()->route('checkout.index')->with('error', $e->getMessage());
+        }
+
+        if (($result['status'] ?? null) === 'COMPLETED') {
+            PaymentService::markPaid($order);
+            return redirect()->route('orders.show', $order->id)->with('success', 'Payment confirmed via PayPal!');
+        }
+
+        return redirect()->route('checkout.index')->with('error', 'PayPal payment was not completed.');
     }
 
     private function buildCartItems(array $cart): array
