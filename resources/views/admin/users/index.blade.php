@@ -20,6 +20,7 @@
             <th style="text-align:left;padding:0.75rem;">Email</th>
             <th style="text-align:left;padding:0.75rem;">Role</th>
             <th style="text-align:left;padding:0.75rem;">Status</th>
+            <th style="text-align:left;padding:0.75rem;">Orders</th>
             <th style="text-align:right;padding:0.75rem;">Actions</th>
           </tr>
         </thead>
@@ -30,6 +31,7 @@
             <td style="padding:0.75rem;">{{ $user->email }}</td>
             <td style="padding:0.75rem;">{{ $user->role }}</td>
             <td style="padding:0.75rem;">{{ $user->status }}</td>
+            <td style="padding:0.75rem;">{{ $user->orders_count }}</td>
             <td style="padding:0.75rem;text-align:right;">
               <a href="{{ route('admin.users.edit', $user) }}" style="margin-right:0.5rem;color:var(--primary);">Edit</a>
               <form action="{{ route('admin.users.destroy', $user) }}" method="POST" style="display:inline;">

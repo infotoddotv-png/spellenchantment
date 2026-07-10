@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -11,7 +12,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::latest()->get();
+        $users = User::withCount('orders')->latest()->get();
         return view('admin.users.index', compact('users'));
     }
 
@@ -32,7 +33,9 @@ class UserController extends Controller
 
         $data['password'] = Hash::make($data['password']);
 
-        User::create($data);
+        $user = User::create($data);
+
+        AuditLog::record('admin.user.created', "Admin created user {$user->email}", $user);
 
         return redirect()->route('admin.users.index')->with('success', 'User created successfully.');
     }
@@ -57,11 +60,14 @@ class UserController extends Controller
 
         $user->update($data);
 
+        AuditLog::record('admin.user.updated', "Admin updated user {$user->email}", $user);
+
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 
     public function destroy(User $user)
     {
+        AuditLog::record('admin.user.deleted', "Admin deleted user {$user->email}", $user);
         $user->delete();
         return back()->with('success', 'User deleted successfully.');
     }

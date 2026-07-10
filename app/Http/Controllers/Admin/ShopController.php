@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -49,7 +50,8 @@ class ShopController extends Controller
         }
         unset($data['digital_file']);
 
-        Product::create($data);
+        $product = Product::create($data);
+        AuditLog::record('admin.product.created', "Admin created product {$product->name}", $product);
         return redirect()->route('admin.shop.index')->with('success', 'Product created.');
     }
 
@@ -89,11 +91,13 @@ class ShopController extends Controller
         unset($data['digital_file']);
 
         $shop->update($data);
+        AuditLog::record('admin.product.updated', "Admin updated product {$shop->name}", $shop);
         return redirect()->route('admin.shop.index')->with('success', 'Product updated.');
     }
 
     public function destroy(Product $shop)
     {
+        AuditLog::record('admin.product.deleted', "Admin deleted product {$shop->name}", $shop);
         $shop->delete();
         return redirect()->route('admin.shop.index')->with('success', 'Product deleted.');
     }

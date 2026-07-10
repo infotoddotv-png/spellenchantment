@@ -32,6 +32,9 @@
       <a href="{{ route('shop.index') }}"    class="nav-link {{ request()->routeIs('shop.*') ? 'active' : '' }}">Shop</a>
       <a href="{{ route('library.index') }}" class="nav-link {{ request()->routeIs('library.*') ? 'active' : '' }}">Library</a>
       <a href="{{ route('blog.index') }}"    class="nav-link {{ request()->routeIs('blog.*') ? 'active' : '' }}">Blog</a>
+      @auth
+        <a href="{{ route('support.index') }}" class="nav-link {{ request()->routeIs('support.*') ? 'active' : '' }}">Support</a>
+      @endauth
     </div>
 
     <div class="nav-icons">
@@ -62,6 +65,9 @@
     <a href="{{ route('library.index') }}" class="{{ request()->routeIs('library.*') ? 'active' : '' }}">Library</a>
     <a href="{{ route('blog.index') }}"    class="{{ request()->routeIs('blog.*') ? 'active' : '' }}">Blog</a>
     <a href="{{ route('cart.index') }}">Cart ({{ $cartCount ?? 0 }})</a>
+    @auth
+      <a href="{{ route('support.index') }}">Support</a>
+    @endauth
   </div>
 </nav>
 

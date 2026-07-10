@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "start": "php -S 0.0.0.0:5000 -t public public/router.php"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\PaymentGateways\PaypalGateway;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
@@ -50,6 +55,8 @@ class CheckoutController extends Controller
 
         session(['coupon' => $coupon->code]);
 
+        AuditLog::record('coupon.applied', "Coupon {$coupon->code} applied at checkout", $coupon);
+
         return back()->with('success', 'Coupon applied!');
     }
 
@@ -90,7 +97,31 @@ class CheckoutController extends Controller
             'crypto', 'manual' => 'manual',
         };
 
+        // Sync the buyer with the users table so every order shows up under Admin > Users,
+        // even for guest checkouts.
+        $user = Auth::user();
+        if (! $user) {
+            // Only auto-attach to a pre-existing guest-checkout record (never-logged-in,
+            // random password) — never silently bind an order to someone's established
+            // real account just because they typed that account's email at checkout.
+            $user = User::where('email', $data['email'])->where('is_guest', true)->first();
+            if (! $user && ! User::where('email', $data['email'])->exists()) {
+                $user = User::create([
+                    'name'     => $data['name'],
+                    'email'    => $data['email'],
+                    'password' => Hash::make(Str::random(24)),
+                    'role'     => 'customer',
+                    'status'   => 'active',
+                    'is_guest' => true,
+                ]);
+            }
+            // If the email belongs to someone else's established account, leave the order
+            // unlinked (null user_id) rather than crashing on the unique constraint or
+            // silently attaching to an account we can't prove ownership of.
+        }
+
         $order = Order::create([
+            'user_id'           => $user?->id,
             'name'              => $data['name'],
             'email'             => $data['email'],
             'payment_method'    => $data['payment_method'],
@@ -103,6 +134,8 @@ class CheckoutController extends Controller
             'items'             => $items,
         ]);
 
+        AuditLog::record('order.placed', "Order #{$order->id} placed by {$order->name} ({$order->email}) for \${$order->total}", $order);
+
         if ($coupon) {
             $coupon->increment('used_count');
         }
@@ -113,6 +146,7 @@ class CheckoutController extends Controller
             $redirectUrl = PaymentService::charge($order);
         } catch (\Throwable $e) {
             $order->update(['status' => 'failed']);
+            AuditLog::record('order.payment_failed', "Payment attempt failed for order #{$order->id}: {$e->getMessage()}", $order);
             return redirect()->route('checkout.index')->with('error', $e->getMessage());
         }
 

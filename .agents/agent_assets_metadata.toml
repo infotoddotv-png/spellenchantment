@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "3nQDuIsA15N1tUdMthvUM"
+uri = "file://digital-products-ready.zip"
+type = "unspecified"
+title = "Digital products ready to sell"

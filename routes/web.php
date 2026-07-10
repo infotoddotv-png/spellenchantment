@@ -8,6 +8,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -54,6 +55,17 @@ Route::get('/checkout/paypal/return/{order}', [CheckoutController::class, 'paypa
 Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
 Route::get('/downloads/{token}', [OrderController::class, 'download'])->name('downloads.show');
 
+// Support (order-scoped, no login required — same access model as the order page)
+Route::get('/orders/{order}/support', [SupportController::class, 'showForOrder'])->name('support.order');
+Route::post('/orders/{order}/support', [SupportController::class, 'storeForOrder'])->name('support.order.store');
+
+// Support (logged-in customer's ticket inbox)
+Route::middleware('auth')->group(function () {
+    Route::get('/support', [SupportController::class, 'index'])->name('support.index');
+    Route::get('/support/{ticket}', [SupportController::class, 'show'])->name('support.show');
+    Route::post('/support/{ticket}/reply', [SupportController::class, 'reply'])->name('support.reply');
+});
+
 // Webhooks
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])->name('webhooks.stripe');
 
@@ -74,7 +86,9 @@ Route::middleware(['auth', EnsureAdmin::class])->prefix('admin')->name('admin.')
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'store'])->name('settings.store');
     Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
-    Route::post('/chat', [ChatController::class, 'store'])->name('chat.store');
+    Route::get('/chat/{ticket}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat/{ticket}', [ChatController::class, 'store'])->name('chat.store');
+    Route::post('/chat/{ticket}/close', [ChatController::class, 'close'])->name('chat.close');
     Route::get('/tools', [ToolsController::class, 'index'])->name('tools.index');
     Route::post('/tools/cache-clear', [ToolsController::class, 'clearCache'])->name('tools.cache-clear');
     Route::get('/tools/backup', [ToolsController::class, 'backup'])->name('tools.backup');

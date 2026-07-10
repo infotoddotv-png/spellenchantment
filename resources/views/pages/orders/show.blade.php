@@ -86,6 +86,7 @@
       <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
         <a href="{{ route('shop.index') }}" class="magic-btn magic-btn-primary">Continue Seeking</a>
         <a href="{{ route('home') }}" class="magic-btn magic-btn-outline">Return to Sanctum</a>
+        <a href="{{ route('support.order', ['order' => $order, 'email' => $order->email]) }}" class="magic-btn magic-btn-outline">Contact Support</a>
       </div>
     </div>
   </div>

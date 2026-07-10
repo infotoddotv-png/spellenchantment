@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,8 +24,12 @@ class LoginController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
+            AuditLog::record('auth.login', "User logged in ({$credentials['email']})", Auth::user());
+
             return redirect()->intended('/');
         }
+
+        AuditLog::record('auth.login_failed', "Failed login attempt for {$credentials['email']}");
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
@@ -33,6 +38,9 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        AuditLog::record('auth.logout', $user ? "User logged out ({$user->email})" : null, $user);
+
         Auth::logout();
 
         $request->session()->invalidate();
